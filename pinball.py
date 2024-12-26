@@ -3,7 +3,7 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 import random
 
-# Initialize constants
+#vbc
 WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 600
 BALL_RADIUS = 10
@@ -13,7 +13,7 @@ GRAVITY = 0.05
 BOUNCE_STRENGTH = 9.0
 INITIAL_BALL_SPEED = 3.0
 
-# Game state variables
+#gts
 ball_x = 400
 ball_y = 300
 ball_dx = 3.0
@@ -29,15 +29,32 @@ game_over = False
 # Power-ups
 active_power_ups = [
     {"x": random.randint(100, 700), "y": random.randint(200, 500), "type": "extra_life", "active": True},
+    {"x": random.randint(100, 700), "y": random.randint(200, 500), "type": "wide_paddle", "active": True},
+    {"x": random.randint(100, 700), "y": random.randint(200, 500), "type": "extra_life", "active": True},
     {"x": random.randint(100, 700), "y": random.randint(200, 500), "type": "wide_paddle", "active": True}
+
 ]
 
-# Floating balls (formerly bars)
+#vball
 floating_balls = [
     {"x": 200, "y": 400, "hit": False},
     {"x": 450, "y": 450, "hit": False},
-    {"x": 300, "y": 500, "hit": False}
+    {"x": 300, "y": 500, "hit": False},
+    {"x": 200, "y": 300, "hit": False},
+    {"x": 150, "y": 450, "hit": False},
+    {"x": 200, "y": 500, "hit": False},
+    {"x": 450, "y": 450, "hit": False},
+    {"x": 700, "y": 500, "hit": False},
+    {"x": 600, "y": 400, "hit": False},
+    {"x": 200, "y": 400, "hit": False},
+    {"x": 450, "y": 450, "hit": False},
+    {"x": 300, "y": 500, "hit": False},
+    {"x": 200, "y": 300, "hit": False},
+    {"x": 150, "y": 450, "hit": False},
+    {"x": 200, "y": 500, "hit": False}
 ]
+
+
 
 # Midpoint Circle Drawing Algorithm
 def draw_circle_midpoint(cx, cy, radius):
@@ -67,12 +84,46 @@ def draw_circle_midpoint(cx, cy, radius):
         plot_circle_points(cx, cy, x, y)
     glEnd()
 
-# Draw the ball
-def draw_ball():
-    glColor3f(1.0, 0.0, 0.0)
+
+# Midpoint Line Drawing Algorithm
+def draw_line_midpoint(x0, y0, x1, y1):
+    dx = abs(x1 - x0)
+    dy = abs(y1 - y0)
+    sx = 1 if x0 < x1 else -1
+    sy = 1 if y0 < y1 else -1
+    err = dx - dy
+
+    glBegin(GL_POINTS)
+    while True:
+        glVertex2f(x0, y0)
+        if x0 == x1 and y0 == y1:
+            break
+        e2 = 2 * err
+        if e2 > -dy:
+            err -= dy
+            x0 += sx
+        if e2 < dx:
+            err += dx
+            y0 += sy
+    glEnd()
+
+def draw_pin():
+    glColor3f(1.0, 0.0, 0.0)  # Red color for the pin
+
+    # Draw the circular base of the pin
     draw_circle_midpoint(ball_x, ball_y, BALL_RADIUS)
 
-# Draw the paddle
+    # Draw the vertical body of the pin
+    draw_line_midpoint(ball_x, ball_y + BALL_RADIUS, ball_x, ball_y + BALL_RADIUS + 40)
+
+    # Draw the horizontal top of the pin (forming the "T")
+    draw_line_midpoint(ball_x - 20, ball_y + BALL_RADIUS - 40, ball_x - 20, ball_y + BALL_RADIUS - 40)
+
+    # Draw the line under the pin to form the "stem"
+    draw_line_midpoint(ball_x - 5, ball_y - BALL_RADIUS - 10, ball_x + 5, ball_y - BALL_RADIUS - 10)
+
+
+## Draw the paddle
 def draw_pad():
     glColor3f(0.0, 1.0, 0.0)
     for x in range(pad_x, pad_x + PAD_WIDTH + 1):
@@ -81,6 +132,9 @@ def draw_pad():
             glVertex2f(x, y)
             glEnd()
 
+
+
+
 # Draw floating balls
 def draw_floating_balls():
     glColor3f(1.0, 1.0, 0.0)
@@ -88,30 +142,15 @@ def draw_floating_balls():
         if not ball["hit"]:
             draw_circle_midpoint(ball["x"], ball["y"], 20)
 
+
 # Draw walls using midpoint line algorithm
 def draw_walls():
-    def draw_line_midpoint(x0, y0, x1, y1):
-        dx = x1 - x0
-        dy = y1 - y0
-        d = 2 * dy - dx
-        x, y = x0, y0
-
-        glBegin(GL_POINTS)
-        while x <= x1:
-            glVertex2f(x, y)
-            x += 1
-            if d < 0:
-                d += 2 * dy
-            else:
-                y += 1
-                d += 2 * (dy - dx)
-        glEnd()
-
     glColor3f(1.0, 1.0, 1.0)
     draw_line_midpoint(50, 50, WINDOW_WIDTH - 50, 50)
     draw_line_midpoint(50, WINDOW_HEIGHT - 50, WINDOW_WIDTH - 50, WINDOW_HEIGHT - 50)
     draw_line_midpoint(50, 50, 50, WINDOW_HEIGHT - 50)
     draw_line_midpoint(WINDOW_WIDTH - 50, 50, WINDOW_WIDTH - 50, WINDOW_HEIGHT - 50)
+
 
 # Draw power-ups
 def draw_power_ups():
@@ -123,10 +162,10 @@ def draw_power_ups():
                 glColor3f(0.0, 1.0, 0.0)  # Green for wide paddle
             draw_circle_midpoint(power_up["x"], power_up["y"], 10)
 
+
 # Update ball physics
 def update_ball():
-    global ball_x, ball_y, ball_dx, ball_dy, score, lives, game_over, high_score
-    global PAD_WIDTH
+    global ball_x, ball_y, ball_dx, ball_dy, score, lives, game_over, high_score, PAD_WIDTH
 
     ball_dy -= GRAVITY
     ball_x += ball_dx
@@ -138,14 +177,15 @@ def update_ball():
     if ball_y + BALL_RADIUS > WINDOW_HEIGHT - 50:
         ball_dy = -ball_dy
 
-    # Paddle collision
+    # P==
     if pad_y <= ball_y - BALL_RADIUS <= pad_y + PAD_HEIGHT and pad_x <= ball_x <= pad_x + PAD_WIDTH:
         ball_dy = BOUNCE_STRENGTH
         score += 10
 
-    # Power-up collision
+    # Plif
     for power_up in active_power_ups:
-        if power_up["active"] and (power_up["x"] - 10 <= ball_x <= power_up["x"] + 10) and (power_up["y"] - 10 <= ball_y <= power_up["y"] + 10):
+        if power_up["active"] and (power_up["x"] - 10 <= ball_x <= power_up["x"] + 10) and (
+                power_up["y"] - 10 <= ball_y <= power_up["y"] + 10):
             power_up["active"] = False
             if power_up["type"] == "extra_life":
                 lives += 1
@@ -154,7 +194,8 @@ def update_ball():
 
     # Floating ball collision
     for ball in floating_balls:
-        if not ball["hit"] and (ball["x"] - 20 <= ball_x <= ball["x"] + 20) and (ball["y"] - 20 <= ball_y <= ball["y"] + 20):
+        if not ball["hit"] and (ball["x"] - 20 <= ball_x <= ball["x"] + 20) and (
+                ball["y"] - 20 <= ball_y <= ball["y"] + 20):
             ball["hit"] = True
             ball_dy = -ball_dy
             score += 20
@@ -169,10 +210,11 @@ def update_ball():
             ball_x, ball_y = 400, 300
             ball_dx, ball_dy = 3.0, -3.0
 
+
 # Display callback
 def display():
     glClear(GL_COLOR_BUFFER_BIT)
-    draw_ball()
+    draw_pin()  # Render the pin shape
     draw_pad()
     draw_walls()
     draw_power_ups()
@@ -197,6 +239,7 @@ def display():
 
     glFlush()
 
+
 # Reset the game
 def reset_game():
     global score, lives, ball_x, ball_y, ball_dx, ball_dy, pad_x, game_over, PAD_WIDTH, active_power_ups, floating_balls
@@ -218,12 +261,14 @@ def reset_game():
     for ball in floating_balls:
         ball["hit"] = False
 
+
 # Timer callback
 def timer(value):
     if not game_over:
         update_ball()
     glutPostRedisplay()
     glutTimerFunc(16, timer, 0)
+
 
 # Handle user input
 def handle_input(key, x, y):
@@ -236,18 +281,20 @@ def handle_input(key, x, y):
         if game_over:
             reset_game()
 
+
 # Main function
 def main():
     glutInit()
     glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB)
     glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT)
-    glutCreateWindow(b"Pinball Game with Power-Ups, Floating Balls, and High Score")
+    glutCreateWindow(b"Pinball Game with Pin Shape and Features")
     glClearColor(0.0, 0.0, 0.0, 1.0)
     gluOrtho2D(0, WINDOW_WIDTH, 0, WINDOW_HEIGHT)
     glutDisplayFunc(display)
     glutKeyboardFunc(handle_input)
     glutTimerFunc(16, timer, 0)
     glutMainLoop()
+
 
 if __name__ == "__main__":
     main()
